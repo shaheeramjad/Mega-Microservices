@@ -18,9 +18,11 @@ router.post("/api/users/signup", [
     return res.status(400).send({ error: 'Provide a valid email' });
   }
 
-  if(!password || typeof password !== 'string') {
-    return res.status(400).send({ error: 'Provide a valid password' });
-  }
+  // if(!password || typeof password !== 'string') {
+  //   return res.status(400).send({ error: 'Provide a valid password' });
+  // }
+
+  console.log('Creating a user...');
 
   res.send({});
 });
