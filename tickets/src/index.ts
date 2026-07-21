@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { app } from './app';
+import { app } from './app.js';
 
 const start = async () => {
   if (!process.env.JWT_KEY) {
@@ -25,3 +25,4 @@ const start = async () => {
 start();
 
 
+ 
