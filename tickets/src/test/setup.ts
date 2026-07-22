@@ -11,6 +11,8 @@ declare global {
   var signin: () => Promise<string[]>;
 }
 
+jest.mock("../../nats-wrapper.js");
+
 let mongo: MongoMemoryServer;
 
 beforeAll(async () => {
