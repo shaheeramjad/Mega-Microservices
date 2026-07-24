@@ -49,7 +49,9 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await mongoose.connection.close();
-  await mongo.stop();
+  if (mongo) {
+    await mongo.stop();
+  }
 });
 
 global.signin = async (): Promise<string[]> => {

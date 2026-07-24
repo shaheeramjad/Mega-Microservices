@@ -14,7 +14,8 @@ interface OrderDoc extends mongoose.Document {
   userId: string;
   status: OrderStatus;
   expiresAt: Date;
-ticket: TicketDoc;
+  ticket: TicketDoc;
+  version: number;
 }
 
 interface OrderModel extends mongoose.Model<OrderDoc> {
@@ -43,6 +44,9 @@ const orderSchema = new mongoose.Schema(
     },
   },
   {
+    versionKey: 'version',
+    optimisticConcurrency: true,
+    timestamps: true,
     toJSON: {
       transform(doc, ret: any) {
         ret.id = ret._id;
@@ -52,6 +56,13 @@ const orderSchema = new mongoose.Schema(
     },
   }
 );
+
+// Ensure repeated saves produce an update, so Mongoose advances `version`.
+orderSchema.pre('save', function () {
+  if (!this.isNew) {
+    this.set('updatedAt', new Date());
+  }
+});
 
 orderSchema.statics.build = (attrs: OrderAttrs) => {
   return new Order(attrs);

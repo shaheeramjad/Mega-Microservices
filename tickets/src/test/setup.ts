@@ -1,17 +1,27 @@
-import { beforeAll, beforeEach, afterAll } from '@jest/globals';
+import { beforeAll, beforeEach, afterAll, jest } from '@jest/globals';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import request from 'supertest';
-
-import { app } from '../app.js';
 
 declare global {
   // eslint-disable-next-line no-var
   var signin: () => Promise<string[]>;
 }
 
-jest.mock("../../nats-wrapper.js");
+jest.unstable_mockModule('../nats-wrapper.js', () => ({
+  natsWrapper: {
+    client: {
+      publish: jest.fn().mockImplementation(
+        (...args: unknown[]) => {
+          const callback = args[2];
+          if (typeof callback === 'function') {
+            callback();
+          }
+        }
+      ),
+    },
+  },
+}));
 
 let mongo: MongoMemoryServer;
 
@@ -23,6 +33,8 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  jest.clearAllMocks();
+
   const db = mongoose.connection.db;
 
   if (!db) {

@@ -13,6 +13,7 @@ interface TicketDoc extends mongoose.Document {
   price: number;
   userId: string;
   version: number;
+  orderId?: string;
 }
 
 interface TicketModel extends mongoose.Model<TicketDoc> {
@@ -33,8 +34,14 @@ const ticketSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+      orderId: {
+        type: String,
+      },
   },
   {
+    versionKey: "version",
+    optimisticConcurrency: true,
+    timestamps: true,
     toJSON: {
       transform(doc, ret: any) {
         ret.id = ret._id;
@@ -44,6 +51,14 @@ const ticketSchema = new mongoose.Schema(
     },
   }
 );
+
+// A save must include a change for Mongoose to issue an update and increment
+// the version key. Updating this timestamp ensures no-op saves are versioned.
+ticketSchema.pre('save', function () {
+  if (!this.isNew) {
+    this.set('updatedAt', new Date());
+  }
+});
 
 ticketSchema.statics.build = (attrs: TicketAttrs) => {
   return new Ticket(attrs);

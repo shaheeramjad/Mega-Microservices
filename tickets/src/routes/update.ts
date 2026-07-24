@@ -1,8 +1,8 @@
 import express, { Request, Response } from 'express';
 import {body} from 'express-validator';
-import { requireAuth, validateRequest, NotFoundError, NotAuthorizedError } from '@shaheertickets/common';
+import { requireAuth, validateRequest, NotFoundError, NotAuthorizedError, type TicketUpdatedEvent, BadRequestError } from '@shaheertickets/common';
 import { Ticket } from '../models/ticket.js';
-import { TicketUpdatedPublisher } from '../events/publishers/ticket-updated-oublisher.js';
+import { TicketUpdatedPublisher } from '../events/publishers/ticket-updated-publisher.js';
 import { natsWrapper } from '../nats-wrapper.js';
 
 const router = express.Router();
@@ -22,6 +22,15 @@ router.put('/api/tickets/:id', requireAuth, [
     throw new NotFoundError();
   }
 
+  if (ticket.orderId) {
+    throw new BadRequestError('Cannot edit a reserved ticket');
+  }
+
+  // Reservations are controlled by order events, never by a ticket update request.
+  if (Object.prototype.hasOwnProperty.call(req.body, 'orderId')) {
+    throw new BadRequestError('Cannot update a ticket reservation');
+  }
+
   if (ticket.userId !== req.currentUser!.id) {
     throw new NotAuthorizedError();
   }
@@ -32,12 +41,19 @@ router.put('/api/tickets/:id', requireAuth, [
   });
   await ticket.save();
 
-  new TicketUpdatedPublisher(natsWrapper.client).publish({
+  const eventData: TicketUpdatedEvent['data'] = {
     id: ticket.id,
     title: ticket.title,
     price: ticket.price,
-    userId: ticket.userId
-  });
+    userId: ticket.userId,
+    version: ticket.version,
+  };
+
+  if (ticket.orderId !== undefined) {
+    eventData.orderId = ticket.orderId;
+  }
+
+  new TicketUpdatedPublisher(natsWrapper.client).publish(eventData);
 
   res.send(ticket);
 });
